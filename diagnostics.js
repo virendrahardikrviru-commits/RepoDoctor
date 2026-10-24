@@ -114,41 +114,75 @@ function checkScripts() {
   return result;
 }
 
-function resolveRequirePath(referencingFileDir, requirePath) {
-  let resolved = path.join(referencingFileDir, requirePath);
-  if (!resolved.endsWith('.js') && !fs.existsSync(resolved)) {
-    const withJs = resolved + '.js';
-    if (fs.existsSync(withJs)) {
-      resolved = withJs;
+const SOURCE_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx'];
+const SOURCE_FILE_REGEX = /\.(js|jsx|ts|tsx)$/;
+
+const REQUIRE_REGEX = /require\(['"](\.\.?\/[^'"]+)['"]\)/g;
+const IMPORT_FROM_REGEX = /import\s+(?:[^'"]*?\s+from\s+)?['"](\.\.?\/[^'"]+)['"]/g;
+const IMPORT_SIDEEFFECT_REGEX = /import\s*['"](\.\.?\/[^'"]+)['"]/g;
+
+function walkSourceFiles(dir, fileList) {
+  fileList = fileList || [];
+  let entries;
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch (err) {
+    return fileList;
+  }
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      walkSourceFiles(fullPath, fileList);
+    } else if (entry.isFile() && SOURCE_FILE_REGEX.test(entry.name)) {
+      fileList.push(fullPath);
     }
   }
-  return resolved;
+  return fileList;
+}
+
+function relativeFileExists(cwd, importPath) {
+  const resolved = path.join(cwd, importPath);
+  if (fs.existsSync(resolved)) {
+    return true;
+  }
+  const alreadyHasExtension = SOURCE_EXTENSIONS.some((ext) =>
+    importPath.endsWith(ext)
+  );
+  if (!alreadyHasExtension) {
+    for (const ext of SOURCE_EXTENSIONS) {
+      if (fs.existsSync(resolved + ext)) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 function checkImports() {
   const cwd = process.cwd();
-  const requireRegex = /require\(['"](\.\.?\/[^'"]+)['"]\)/g;
   const missing = [];
   const seen = new Set();
 
-  try {
-    const entries = fs.readdirSync(cwd);
-    const jsFiles = entries.filter((entry) => entry.endsWith('.js'));
+  const sourceFiles = walkSourceFiles(cwd);
 
-    for (const jsFile of jsFiles) {
-      const filePath = path.join(cwd, jsFile);
-      let content;
-      try {
-        content = fs.readFileSync(filePath, 'utf8');
-      } catch (err) {
-        continue;
-      }
+  for (const filePath of sourceFiles) {
+    let content;
+    try {
+      content = fs.readFileSync(filePath, 'utf8');
+    } catch (err) {
+      continue;
+    }
 
+    const fileDir = path.dirname(filePath);
+
+    const regexes = [REQUIRE_REGEX, IMPORT_FROM_REGEX, IMPORT_SIDEEFFECT_REGEX];
+    for (const regex of regexes) {
+      regex.lastIndex = 0;
       let match;
-      while ((match = requireRegex.exec(content)) !== null) {
-        const requirePath = match[1];
-        const resolved = resolveRequirePath(cwd, requirePath);
-        if (!fs.existsSync(resolved)) {
+      while ((match = regex.exec(content)) !== null) {
+        const importPath = match[1];
+        const resolved = path.join(fileDir, importPath);
+        if (!relativeFileExists(fileDir, importPath)) {
           const key = path.resolve(resolved);
           if (!seen.has(key)) {
             seen.add(key);
@@ -157,8 +191,6 @@ function checkImports() {
         }
       }
     }
-  } catch (err) {
-    // Ignore directory read errors; return whatever was collected.
   }
 
   return missing;

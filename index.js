@@ -1,6 +1,11 @@
 const fs = require('fs');
 const path = require('path');
-const { checkEnvKeys, checkDependencies, checkScripts, checkImports } = require('./diagnostics');
+const {
+  checkEnvKeys,
+  checkDependencies,
+  checkScripts,
+  checkImports,
+} = require('./diagnostics');
 
 function bullet(text) {
   return '- ' + text;
@@ -89,7 +94,7 @@ function formatImportsSection(missing) {
   lines.push('');
 
   if (missing.length === 0) {
-    lines.push(bullet('No broken relative `require()` imports found.'));
+    lines.push(bullet('No broken relative imports found.'));
     lines.push('');
     return lines.join('\n');
   }
