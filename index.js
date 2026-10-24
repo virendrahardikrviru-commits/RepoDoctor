@@ -1,8 +1,6 @@
-#!/usr/bin/env node
-
 const fs = require('fs');
 const path = require('path');
-const { checkEnvKeys, checkDependencies, checkScripts } = require('./diagnostics');
+const { checkEnvKeys, checkDependencies, checkScripts, checkImports } = require('./diagnostics');
 
 function bullet(text) {
   return '- ' + text;
@@ -85,11 +83,31 @@ function formatScriptsSection(result) {
   return lines.join('\n');
 }
 
+function formatImportsSection(missing) {
+  const lines = [];
+  lines.push('## 🔍 Code Import Links');
+  lines.push('');
+
+  if (missing.length === 0) {
+    lines.push(bullet('No broken relative `require()` imports found.'));
+    lines.push('');
+    return lines.join('\n');
+  }
+
+  lines.push(bullet('**Broken imports detected:**'));
+  for (const missingFile of missing) {
+    lines.push(bullet('Missing: `' + missingFile + '`'));
+  }
+  lines.push('');
+  return lines.join('\n');
+}
+
 function generateReport() {
   const cwd = process.cwd();
   const envResult = checkEnvKeys();
   const depsResult = checkDependencies();
   const scriptsResult = checkScripts();
+  const importsResult = checkImports();
 
   const lines = [];
   lines.push('# AI Debug Report');
@@ -100,6 +118,7 @@ function generateReport() {
   lines.push(formatEnvSection(envResult));
   lines.push(formatDepsSection(depsResult));
   lines.push(formatScriptsSection(scriptsResult));
+  lines.push(formatImportsSection(importsResult));
   lines.push('---');
   lines.push('End of report.');
 

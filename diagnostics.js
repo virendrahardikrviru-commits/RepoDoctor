@@ -114,8 +114,59 @@ function checkScripts() {
   return result;
 }
 
+function resolveRequirePath(referencingFileDir, requirePath) {
+  let resolved = path.join(referencingFileDir, requirePath);
+  if (!resolved.endsWith('.js') && !fs.existsSync(resolved)) {
+    const withJs = resolved + '.js';
+    if (fs.existsSync(withJs)) {
+      resolved = withJs;
+    }
+  }
+  return resolved;
+}
+
+function checkImports() {
+  const cwd = process.cwd();
+  const requireRegex = /require\(['"](\.\.?\/[^'"]+)['"]\)/g;
+  const missing = [];
+  const seen = new Set();
+
+  try {
+    const entries = fs.readdirSync(cwd);
+    const jsFiles = entries.filter((entry) => entry.endsWith('.js'));
+
+    for (const jsFile of jsFiles) {
+      const filePath = path.join(cwd, jsFile);
+      let content;
+      try {
+        content = fs.readFileSync(filePath, 'utf8');
+      } catch (err) {
+        continue;
+      }
+
+      let match;
+      while ((match = requireRegex.exec(content)) !== null) {
+        const requirePath = match[1];
+        const resolved = resolveRequirePath(cwd, requirePath);
+        if (!fs.existsSync(resolved)) {
+          const key = path.resolve(resolved);
+          if (!seen.has(key)) {
+            seen.add(key);
+            missing.push(resolved);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    // Ignore directory read errors; return whatever was collected.
+  }
+
+  return missing;
+}
+
 module.exports = {
   checkEnvKeys,
   checkDependencies,
   checkScripts,
+  checkImports,
 };
