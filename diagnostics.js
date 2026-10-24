@@ -121,6 +121,16 @@ const REQUIRE_REGEX = /require\(['"](\.\.?\/[^'"]+)['"]\)/g;
 const IMPORT_FROM_REGEX = /import\s+(?:[^'"]*?\s+from\s+)?['"](\.\.?\/[^'"]+)['"]/g;
 const IMPORT_SIDEEFFECT_REGEX = /import\s*['"](\.\.?\/[^'"]+)['"]/g;
 
+function shouldSkipDirectory(dirName) {
+  if (dirName === 'node_modules') {
+    return true;
+  }
+  if (dirName.startsWith('.')) {
+    return true;
+  }
+  return false;
+}
+
 function walkSourceFiles(dir, fileList) {
   fileList = fileList || [];
   let entries;
@@ -132,6 +142,9 @@ function walkSourceFiles(dir, fileList) {
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
+      if (shouldSkipDirectory(entry.name)) {
+        continue;
+      }
       walkSourceFiles(fullPath, fileList);
     } else if (entry.isFile() && SOURCE_FILE_REGEX.test(entry.name)) {
       fileList.push(fullPath);
@@ -140,8 +153,8 @@ function walkSourceFiles(dir, fileList) {
   return fileList;
 }
 
-function relativeFileExists(cwd, importPath) {
-  const resolved = path.join(cwd, importPath);
+function relativeFileExists(fileDir, importPath) {
+  const resolved = path.join(fileDir, importPath);
   if (fs.existsSync(resolved)) {
     return true;
   }
