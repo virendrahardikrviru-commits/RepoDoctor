@@ -1,3 +1,5 @@
+![RepoDoctor Banner](banner.svg)
+
 # RepoDoctor
 
 RepoDoctor is a lightweight Node.js CLI tool that analyzes a project directory, catches common mistakes made by AI code generators, and exports a structured Markdown report named `AI_DEBUG_REPORT.md`.
