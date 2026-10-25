@@ -1,4 +1,4 @@
-![RepoDoctor Banner](banner.svg)
+![RepoDoctor Banner](https://githubusercontent.com)
 
 # RepoDoctor
 
