@@ -1,4 +1,6 @@
-![RepoDoctor Banner](https://githubusercontent.com)
+<p align="center">
+  <img src="banner.svg" alt="RepoDoctor Banner" width="100%">
+</p>
 
 # RepoDoctor
 
