@@ -1,4 +1,4 @@
-![RepoDoctor Banner](./banner.svg)
+![RepoDoctor Banner](RepoDoctor_%20Neon%20Code%20Diagnostics.png)
 
 # RepoDoctor
 
